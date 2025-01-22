@@ -60,4 +60,3 @@ add dont-require-permissions=no name=delete-routes owner=USERNAME policy=ftp,reb
 add interval=10s name=routes on-event="/system script run add-routes\r\
     \n/system script run delete-routes" policy=ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon start-time=startup
 
-14.03 13-14
