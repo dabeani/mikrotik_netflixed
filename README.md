@@ -1,2 +1,67 @@
 # mikrotik_netflixed
 Mikrotik Wiregurad Netflix Tunnel
+
+
+Mikrotik Netflixed
+
+# prevent adding internal used subnets to the Netflix address-list, customization needed 
+/ip firewall address-list
+add address=127.0.0.1 list=not_netflixed
+add address=172.30.0.0/15 list=not_netflixed
+add address=10.0.0.0/8 list=not_netflixed
+add address=192.168.0.0/16 list=not_netflixed
+add address=239.255.255.250 list=not_netflixed
+
+# Drop Netflix from WAN („WAN“ need to be changed to the correct Interface-List!)
+/ip firewall filter
+add action=drop chain=output comment="drop recognised Netflix traffic from WAN" dst-address-list=Netflix log=yes log-prefix=FW_DROP_Netflix-on-WAN out-interface-list=WAN
+
+/ip firewall raw
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting comment=Netflix content=netflix dst-address-list=!not_netflixed
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflxso dst-address-list=!not_netflixed
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflxext dst-address-list=!not_netflixed
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflxvideo dst-address-list=!not_netflixed
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflximg dst-address-list=!not_netflixed
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflx dst-address-list=!not_netflixed
+
+# needed for Wireguard tunnels! („WG-Tunnels“ need to be changed to correct Interface-List!)
+/ip firewall mangle
+add action=change-mss chain=postrouting new-mss=clamp-to-pmtu out-interface-list=WG-Tunnels passthrough=yes protocol=tcp tcp-flags=syn
+
+
+# SCRIPTs („USERNAME“ need to be changed!)
+/system script
+add dont-require-permissions=no name=add-routes owner=USERNAME policy=ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon source="# NETFLIX\r\
+    \n:local x\r\
+    \n:foreach i in=[/ip firewall address-list find list=\"Netflix\"] do={\r\
+    \n    :set x [/ip firewall address-list get value-name=address \$i]\r\
+    \n    :local route [/ip route find where dst-address=\$x]\r\
+    \n    :local rnum  [:len \$route]\r\
+    \n    :if (\$rnum = 0) do={\r\
+    \n        :log info \"***SplitTunnelDNS***(Netflix): the route NOT exist, add \$x\"\r\
+    \n        /ip route add dst-address=\$x comment=\"SplitTunnelDNS - Netflix\" gateway=wireguard\r\
+    \n    } \r\
+    \n}\r\
+    \n\r\
+    \n#:log info \"***SplitTunnelDNS/add-routes*** End\""
+add dont-require-permissions=no name=delete-routes owner=USERNAME policy=ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon source="# Netlfix\r\
+    \n:local x\r\
+    \n:local ip\r\
+    \n:foreach i in=[/ip route find where comment=\"SplitTunnelDNS - Netflix\"] do={\r\
+    \n    :set x [/ip route get value-name=dst-address \$i]\r\
+    \n    :set ip [:pick \$x 0 [:find \$x \"/\"]]\r\
+    \n    :local firewall [/ip firewall address-list find list=\"Netflix\" address=\$ip]\r\
+    \n    :local rnum  [:len \$firewall]\r\
+    \n    :if (\$rnum = 0) do={\r\
+    \n        :log info \"***SplitTunnelDNS***(Netflix): route entry (\$ip,\$x) does not exist in firewall address-list (Netflix), autoremove route now...\"\r\
+    \n        /ip route remove [find where dst-address=\$x]\r\
+    \n    } \r\
+    \n}\r\
+    \n\r\
+    \n#:log info \"***SplitTunnelDNS/delete-routes*** End\""
+
+/system scheduler
+add interval=10s name=routes on-event="/system script run add-routes\r\
+    \n/system script run delete-routes" policy=ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon start-time=startup
+
+14.03 13-14
