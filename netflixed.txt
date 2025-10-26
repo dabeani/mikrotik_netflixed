@@ -12,13 +12,32 @@ add address=239.255.255.250 list=not_netflixed
 /ip firewall filter
 add action=drop chain=output comment="drop recognised Netflix traffic from WAN" dst-address-list=Netflix log=yes log-prefix=FW_DROP_Netflix-on-WAN out-interface-list=WAN
 
+# Filter based on the "content" with the shortcuts as you can see in the code (e.g netflix, nfsxso,...)
 /ip firewall raw
-add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting comment=Netflix content=netflix dst-address-list=!not_netflixed
-add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflxso dst-address-list=!not_netflixed
-add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflxext dst-address-list=!not_netflixed
-add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflxvideo dst-address-list=!not_netflixed
-add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflximg dst-address-list=!not_netflixed
-add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflx dst-address-list=!not_netflixed
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting comment=Netflix content=netflix dst-address-list=\
+    !not_netflixed dst-port=443 protocol=tcp
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=netflix dst-address-list=!not_netflixed \
+    dst-port=80 protocol=tcp
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflxso dst-address-list=!not_netflixed \
+    dst-port=443 protocol=tcp
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflxso dst-address-list=!not_netflixed \
+    dst-port=80 protocol=tcp
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflxext dst-address-list=!not_netflixed \
+    dst-port=443 protocol=tcp
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflxext dst-address-list=!not_netflixed \
+    dst-port=80 protocol=tcp
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflxvideo dst-address-list=!not_netflixed \
+    dst-port=443 protocol=tcp
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflxvideo dst-address-list=!not_netflixed \
+    dst-port=80 protocol=tcp
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflximg dst-address-list=!not_netflixed \
+    dst-port=443 protocol=tcp
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflximg dst-address-list=!not_netflixed \
+    dst-port=80 protocol=tcp
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflx dst-address-list=!not_netflixed \
+    dst-port=443 protocol=tcp
+add action=add-dst-to-address-list address-list=Netflix address-list-timeout=1d chain=prerouting content=nflx dst-address-list=!not_netflixed \
+    dst-port=80 protocol=tcp
 
 # needed for Wireguard tunnels! („WG-Tunnels“ need to be changed to correct Interface-List!)
 /ip firewall mangle
